@@ -3,6 +3,8 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 
+int size = 1000;
+
 static unsigned int CompileShader(unsigned int type, const std::string& source) {
 	unsigned int id = glCreateShader(type);
 	const char* src = source.c_str();
@@ -50,7 +52,7 @@ int main(void)
 	}
 
 	/* Create a windowed mode window and its OpenGL context */
-	window = glfwCreateWindow(500, 500, "Hello World", NULL, NULL);
+	window = glfwCreateWindow(size, size, "Hello World", NULL, NULL);
 	if (!window)
 	{
 		std::cout << "Window creation failed!" << std::endl;
@@ -106,7 +108,7 @@ int main(void)
 	glUniform1f(maxI, 6.5E-4 + 0.1127);
 	glUniform1f(minR, -6.5E-4 - 0.7453);
 	glUniform1f(maxR, 6.5E-4 - 0.7453);
-	glUniform2f(dimension, 500, 500);
+	glUniform2f(dimension, size, size);
 
 
 	/* Loop until the user closes the window */
