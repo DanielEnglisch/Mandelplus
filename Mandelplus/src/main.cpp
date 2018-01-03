@@ -29,7 +29,7 @@ int main(void)
 	//double dy = 1.0375665;
 	//double zoom = 10E-7;
 
-	MandelbrotRenderer* r1{ new MandelbrotRenderer{ 2000,2000,1000, zoom, dx,dy } };
+	MandelbrotRenderer* r1{ new MandelbrotRenderer{ 5000,5000,1000, zoom, dx,dy } };
 	r1->generate();
 	r1->color();
 	r1->exportPPM();
