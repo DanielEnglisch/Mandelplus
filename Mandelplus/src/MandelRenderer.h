@@ -11,12 +11,12 @@
 
 /* Structs */
 struct Color {
-	int r, g, b;
+	unsigned int r, g, b;
 };
 
 struct ManVal {
 	double r, c;
-	int i;
+	unsigned int i;
 };
 
 
@@ -24,17 +24,17 @@ class MandelbrotRenderer {
 private:
 	std::vector<std::thread> threads;
 
-	int width{ 100 };
-	int height{ 100 };
+	unsigned int width{ 100 };
+	unsigned int height{ 100 };
 
 	double dx{ 0 };
 	double dy{ 0 };
-	int maxIterations{ 100 };
+	unsigned int maxIterations{ 100 };
 	double zoom{ 2 };
 	GLFWwindow* window{ nullptr };
 	ManVal* data{ nullptr };
 	char* rgbBuffer{ nullptr };
-	int numPixels{ width*height };
+	unsigned int numPixels{ width*height };
 
 	/* Gradient from https://www.strangeplanet.fr/work/gradient-generator/index.php */
 	const std::string hex[512]{
@@ -44,48 +44,14 @@ private:
 	/* Coloring method from https://stackoverflow.com/a/25816111 */
 	const double ONE_OVER_LOG2{ 1.442695040889 };
 
-	Color getColor(const int i, const double r, const double c) {
-		const double size{ sqrt(r * r + c * c) };
-		const double smoothed{ log(log(size) * ONE_OVER_LOG2) * ONE_OVER_LOG2 };
-		const int colorI{ (int)(sqrt(i + 1 - smoothed) * 256) % 512 };
-		int cr, cg, cb;
-		sscanf_s(hex[colorI].c_str(), "%02x%02x%02x", &cr, &cg, &cb);
-		return Color{ (cr),(cg),(cb) };
-	}
+	Color getColor(const int i, const double r, const double c);
+	ManVal getMandelbrotValue(const int x, const int y);
+	void construct(const unsigned int minWidth, const unsigned int maxWidth, const unsigned int minHeight, const unsigned int maxHeight, ManVal* data, const bool log = false);
 
-	ManVal getMandelbrotValue(const int x, const int y) {
-
-		// Map pixel position between minR and maxR
-		double a{ map(x, 0, width, -zoom, zoom) + dx };
-		double b{ map(y, 0, height, -zoom, zoom) + dy };
-
-		const double initialA{ a };
-		const double initialB{ b };
-		
-		int n{ 0 };
-
-		// Iterate
-		for (n = 0; n < maxIterations; n++) {
-			// Apply mandelbrot formula
-			double newA{ a * a - b * b };
-
-			double newB{ 2 * a*b };
-
-			a = initialA + newA;
-			b = initialB + newB;
-
-			// If it gets towards infinity
-			if (abs(a + b) > 2)
-				break;
-		}
-
-		return ManVal{ a,b,n };
-
-	}
 
 public:
 
-	MandelbrotRenderer(const int width, const int height, const  int maxIterations, const double zoom, const double dx, const  double dy)
+	MandelbrotRenderer(const unsigned int width, const unsigned int height, const unsigned int maxIterations, const double zoom, const double dx, const  double dy)
 		:width{ width }, height{ height }, maxIterations{ maxIterations }, zoom{ zoom }, dx{ dx }, dy{ dy }
 	{		
 		numPixels = width*height;
@@ -93,141 +59,32 @@ public:
 		rgbBuffer = new char[numPixels *3];
 	}
 
+	/* Prohibit copy / move construct / assign */
+	MandelbrotRenderer(const MandelbrotRenderer&) = delete;
+	MandelbrotRenderer(const MandelbrotRenderer&&) = delete;
+	MandelbrotRenderer& operator=(const MandelbrotRenderer&) = delete;
+	MandelbrotRenderer& operator=(const MandelbrotRenderer&&) = delete;
+
 	~MandelbrotRenderer() {
 		delete[] data;
 		delete[] rgbBuffer;
 	}
 
-	void exportPPM() {
+	void exportPPM() const;
+	void color();
+	void generate();
+	void show();
 
-		FILE *fp;
-		errno_t err;
-
-		if ((err = fopen_s(&fp, "export.ppm", "wb")) != 0) {
-			std::cerr << "Error opening file!" << std::endl;
-		}
-		else {
-			(void)fprintf(fp, "P6\n%d %d\n255\n", width, height);
-			std::cout << "Writing " << sizeof(char)*numPixels * 3 << " Bytes..." << std::endl;
-			fwrite(rgbBuffer, sizeof(char), numPixels * 3, fp);
-			(void)fclose(fp);
-			std::cout << "Exported image: export.ppm!" << std::endl;
-		}
-	};
-
-
-	void color() {
-		if (rgbBuffer != nullptr) {
-			delete[] rgbBuffer;
-			rgbBuffer = new char[numPixels * 3];
-		}
-
-		std::cout << "=== Coloring... ===" << std::endl;
-
-
-		for (unsigned int x{ 0 }; x < width; x++) {
-			for (unsigned int y{ 0 }; y < height; y++) {
-
-				const unsigned int dataIndex{ (x + y * width) };
-				const unsigned int i { dataIndex *3};
-
-				ManVal v{ data[dataIndex] };
-				Color c{ getColor(v.i,v.r,v.c) };
-
-				rgbBuffer[i + 0] = c.r;
-				rgbBuffer[i + 1] = c.g;
-				rgbBuffer[i + 2] = c.b;
-
-			}
-			//std::cout << ((x * width) / (double)numPixels)*100 << "%" << std::endl;
-		}
-
-	 }
-
-
-	void construct(const unsigned int minWidth, const unsigned int maxWidth, const unsigned int minHeight, const unsigned int maxHeight, ManVal* data, const bool log = false) {
-
-		for (unsigned int x{ minWidth }; x < maxWidth; x++) {
-			for (unsigned int y{ minHeight }; y < maxHeight; y++) {
-				const unsigned int i{ (x + y * width) };
-				const ManVal v{ getMandelbrotValue(x, y) };
-				data[i] = v;
-			}
-			if(log)
-				std::cout << ((x- minWidth) / (double)(maxWidth-minWidth))*100 << "%" << std::endl;
-
-		}
-
+	const unsigned int getNumPixels() inline const {
+		return numPixels;
 	}
 
-	void generate() {
-		if (data != nullptr) {
-			delete[] data;
-			data = new ManVal[numPixels];
-		}
-
-		std::cout << "Rendering  " << width << "x" << height << " with " << maxIterations << " iterations" << std::endl;
-		std::cout << "Zoom:" << zoom << std::endl;
-		std::cout << "Dx:" << dx << std::endl;
-		std::cout << "Dy:" << dy << std::endl;
-
-		const clock_t begin{ clock() };
-		std::cout << "Rendering with 4 threads..."  << std::endl;
-
-		threads.push_back(std::thread(&MandelbrotRenderer::construct, this,0, width / 2, 0, height / 2, data,false));
-		threads.push_back(std::thread(&MandelbrotRenderer::construct, this,width / 2, width, 0, height / 2, data,false));
-		threads.push_back(std::thread(&MandelbrotRenderer::construct, this,0, width / 2, height / 2, height, data,false));
-		construct(width / 2, width, height / 2, height, data, false);
+	ManVal* cloneData();
+	unsigned int* cloneIterationData();
+	double* cloneRealData();
+	double* cloneImaginaryData();
+	char* cloneRGB();
 
 
-		for (unsigned int i{ 0 }; i < threads.size(); ++i)
-		{
-			if (threads[i].joinable())
-				threads.at(i).join();
-		}
-
-		std::cout << "Done! Took " << (double(clock() - begin) / CLOCKS_PER_SEC) << "s" << std::endl;
-
-		
-	}
-
-
-	void show() {
-
-		/* Initialize the library */
-		if (!glfwInit()) {
-			std::cout << "glfwInit failed!" << std::endl;
-		}
-
-		/* Create a windowed mode window and its OpenGL context */
-		window = glfwCreateWindow(width, height, "Mandelplus", NULL, NULL);
-		if (!window)
-		{
-			std::cout << "Window creation failed!" << std::endl;
-			glfwTerminate();
-		}
-
-		/* Make the window's context current */
-		glfwMakeContextCurrent(window);
-
-		/* Init GLEW */
-		if (glewInit() != GLEW_OK) {
-			std::cout << "glewInit failed!" << std::endl;
-		}
-
-		glDrawPixels(width, height, GL_RGB, GL_UNSIGNED_BYTE, rgbBuffer);
-		glfwSwapBuffers(window);
-
-		/* Loop until the user closes the window */
-		while (!glfwWindowShouldClose(window))
-		{
-
-			/* Poll for and process events */
-			glfwPollEvents();
-
-		}
-
-		glfwTerminate();
-	}
 
 };

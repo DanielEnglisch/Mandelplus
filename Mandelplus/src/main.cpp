@@ -1,7 +1,5 @@
 #include "MandelRenderer.h"
 
-
-
 int main(void)
 {
 	/* Spiral */
@@ -29,11 +27,18 @@ int main(void)
 	//double dy = 1.0375665;
 	//double zoom = 10E-7;
 
-	MandelbrotRenderer* r1{ new MandelbrotRenderer{ 5000,5000,1000, zoom, dx,dy } };
+	MandelbrotRenderer* r1{ new MandelbrotRenderer{ 100,100,1000, zoom, dx,dy } };
 	r1->generate();
 	r1->color();
 	r1->exportPPM();
 	r1->show();
+
+	unsigned int* iterations{ r1->cloneIterationData() };
+	unsigned int size{ r1->getNumPixels() };
 	delete r1;
 
+	for (unsigned int i{ 0 }; i < size; ++i)
+		std::cout << iterations[i] << ", ";
+	std::cout << std::endl;
+	delete[] iterations;
 }

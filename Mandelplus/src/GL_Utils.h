@@ -1,17 +1,12 @@
 #pragma once
-
-#define GLEW_STATIC
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
 
 
-
 static  double map(double value, double inMin, double inMax, double outMin, double outMax) {
 	return outMin + (outMax - outMin) * (value - inMin) / (inMax - inMin);
 }
-
-
 
 static unsigned int CompileShader(unsigned int type, const std::string& source) {
 	unsigned int id = glCreateShader(type);
@@ -33,6 +28,11 @@ static unsigned int CompileShader(unsigned int type, const std::string& source) 
 	}
 
 	return id;
+}
+
+static void setUniform(const unsigned int programId, const std::string& uniformName, const double value) {
+	unsigned int loc = glGetUniformLocation(programId, uniformName.c_str());
+	glUniform1d(loc, value);
 }
 
 static unsigned int CreateProgram(const std::string& vert, const std::string& frag) {
