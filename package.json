@@ -1,0 +1,9 @@
+{
+  "name": "Mandelplus",
+  "description": "A simple c++ fractal renderer",
+  "version": "0.5",
+  "dependencies": {
+    "http://www.glfw.org/": "3.2.1",
+    "http://glew.sourceforge.net/": "2.1.0"
+  }
+}
