@@ -9,14 +9,25 @@
 #include <vector>
 #include <ctime>
 
+#include <MPFR\mpfr.h>
+
 /* Structs */
 struct Color {
 	unsigned int r, g, b;
 };
 
 struct ManVal {
-	double r, c;
+
+	mpfr_t r, c;
 	unsigned int i;
+	ManVal() = default;
+	ManVal(mpfr_t r, mpfr_t c , unsigned int i) {
+		this->i = i;
+		mpfr_init2(this->r, 128);
+		mpfr_init2(this->c, 128);
+		mpfr_set(this->r, r, MPFR_RNDU);
+		mpfr_set(this->c, c, MPFR_RNDU);
+	}
 };
 
 
@@ -44,7 +55,7 @@ private:
 	/* Coloring method from https://stackoverflow.com/a/25816111 */
 	const double ONE_OVER_LOG2{ 1.442695040889 };
 
-	Color getColor(const int i, const double r, const double c);
+	Color getColor(const unsigned int i, mpfr_t  r, mpfr_t  c);
 	ManVal getMandelbrotValue(const int x, const int y);
 	void construct(const unsigned int minWidth, const unsigned int maxWidth, const unsigned int minHeight, const unsigned int maxHeight, ManVal* data, const bool log = false);
 

@@ -1,41 +1,110 @@
 #include "MandelRenderer.h"
 
-Color MandelbrotRenderer::getColor(const int i, const double r, const double c) {
-	const double size{ sqrt(r * r + c * c) };
-	const double smoothed{ log(log(size) * ONE_OVER_LOG2) * ONE_OVER_LOG2 };
-	const int colorI{ (int)(sqrt(i + 1 - smoothed) * 256) % 512 };
+Color MandelbrotRenderer::getColor(const unsigned int i, mpfr_t  r, mpfr_t  c) {
+
+	//return Color{i%255,i*2%255,i*3%255};
+
+	mpfr_t size,tmp1;
+	mpfr_init2(size, 128);
+	mpfr_init2(tmp1, 128);
+
+	mpfr_mul(size, r, r, MPFR_RNDU);
+	mpfr_mul(tmp1, c,c, MPFR_RNDD);
+
+	mpfr_add(size, size, tmp1, MPFR_RNDU);
+	
+
+
+	//const double smoothed{ log(log(size) * ONE_OVER_LOG2) * ONE_OVER_LOG2 };
+	mpfr_log(size, size, MPFR_RNDU);
+	mpfr_mul_d(size, size, ONE_OVER_LOG2, MPFR_RNDU);
+	mpfr_log(size, size, MPFR_RNDU);
+	mpfr_mul_d(size, size, ONE_OVER_LOG2, MPFR_RNDU);
+	mpfr_mul_d(size, size, -1.0, MPFR_RNDU);
+	mpfr_add_ui(size, size, (i+1), MPFR_RNDU);
+	mpfr_sqrt(size, size, MPFR_RNDU);
+	mpfr_mul_ui(size, size, 256, MPFR_RNDU);
+	mpfr_set_d(tmp1, 512.0, MPFR_RNDU);
+	mpfr_fmod(size, size, tmp1, MPFR_RNDU);
+
+	const unsigned int colorI{ mpfr_get_ui(size, MPFR_RNDU)};
+
+
 	unsigned int cr, cg, cb;
 	sscanf_s(hex[colorI].c_str(), "%02x%02x%02x", &cr, &cg, &cb);
+	mpfr_clear(size);
+	mpfr_clear(tmp1);
 	return Color{ (cr),(cg),(cb) };
 }
 
 ManVal MandelbrotRenderer::getMandelbrotValue(const int x, const int y) {
 
-	// Map pixel position between minR and maxR
-	double a{ map(x, 0, width, -zoom, zoom) + dx };
-	double b{ map(y, 0, height, -zoom, zoom) + dy };
+#define PREC 128
 
-	const double initialA{ a };
-	const double initialB{ b };
+
+	mpfr_t a, b;
+	mpfr_init2(a, PREC);
+	mpfr_init2(b, PREC);
+	mpfr_set_d(a, map(x, 0, width, -zoom, zoom) + dx, MPFR_RNDD);
+	mpfr_set_d(b, map(y, 0, height, -zoom, zoom) + dy, MPFR_RNDD);
+
+
+	// Map pixel position between minR and maxR
+	//double a{ map(x, 0, width, -zoom, zoom) + dx };
+	//double b{ map(y, 0, height, -zoom, zoom) + dy };
+
+
+	mpfr_t initialA, initialB;
+	//const double initialA{ a };
+	//const double initialB{ b };
+	mpfr_init2(initialA, PREC);
+	mpfr_init2(initialB, PREC);
+	mpfr_set(initialA, a, MPFR_RNDD);
+	mpfr_set(initialB, b, MPFR_RNDD);
 
 	unsigned int n{ 0 };
 
 	// Iterate
 	for (n = 0; n < maxIterations; n++) {
 		// Apply mandelbrot formula
-		double newA{ a * a - b * b };
+		mpfr_t newA, newB, tmp1;
+		mpfr_init2(newA, PREC);
+		mpfr_init2(newB, PREC);
+		mpfr_init2(tmp1, PREC);
 
-		double newB{ 2 * a*b };
+		mpfr_mul(newA, a, a, MPFR_RNDU);
+		mpfr_mul(tmp1, b, b, MPFR_RNDU);
+		mpfr_sub(newA, newA, tmp1, MPFR_RNDU);
 
-		a = initialA + newA;
-		b = initialB + newB;
+		mpfr_mul(newB, a, b, MPFR_RNDU);
+		mpfr_mul_d(newB, newB, 2.0, MPFR_RNDU);
+
+		mpfr_add(tmp1, initialA, newA, MPFR_RNDU);
+		mpfr_set(a, tmp1, MPFR_RNDU);
+
+		mpfr_add(tmp1, initialB, newB, MPFR_RNDU);
+		mpfr_set(b, tmp1, MPFR_RNDU);
+
+		mpfr_add(tmp1, a, b, MPFR_RNDU);
+		mpfr_abs(tmp1, tmp1, MPFR_RNDU);
+
 
 		// If it gets towards infinity
-		if (abs(a + b) > 2)
+		if (mpfr_cmp_ui(tmp1,2.0) > 0)
 			break;
+
+		mpfr_clear(newB);
+		mpfr_clear(newA);
+		mpfr_clear(tmp1);
+
 	}
 
-	return ManVal{ a,b,n };
+	//mpfr_clear(a);
+	//mpfr_clear(b);
+	mpfr_clear(initialA);
+	mpfr_clear(initialB);
+
+	return ManVal{ a, b, n };
 
 }
 
@@ -116,7 +185,7 @@ void MandelbrotRenderer::generate() {
 	threads.push_back(std::thread(&MandelbrotRenderer::construct, this, 0, width / 2, 0, height / 2, data, false));
 	threads.push_back(std::thread(&MandelbrotRenderer::construct, this, width / 2, width, 0, height / 2, data, false));
 	threads.push_back(std::thread(&MandelbrotRenderer::construct, this, 0, width / 2, height / 2, height, data, false));
-	construct(width / 2, width, height / 2, height, data, false);
+	construct(width / 2, width, height / 2, height, data, true);
 
 
 	for (unsigned int i{ 0 }; i < threads.size(); ++i)
@@ -180,7 +249,7 @@ unsigned int* MandelbrotRenderer::cloneIterationData() {
 double* MandelbrotRenderer::cloneRealData() {
 	double* d = new double[numPixels];
 	for (unsigned int i{ 0 }; i < numPixels; ++i) {
-		d[i] = data[i].r;
+		d[i] = mpfr_get_d(data[i].r, MPFR_RNDU);
 	}
 	return d;
 }
@@ -188,7 +257,7 @@ double* MandelbrotRenderer::cloneRealData() {
 double* MandelbrotRenderer::cloneImaginaryData() {
 	double* d = new double[numPixels];
 	for (unsigned int i{ 0 }; i < numPixels; ++i) {
-		d[i] = data[i].c;
+		d[i] = mpfr_get_d(data[i].c, MPFR_RNDU);
 	}
 	return d;
 }

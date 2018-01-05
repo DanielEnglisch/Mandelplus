@@ -30,4 +30,8 @@
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="dll\mpfr.dll" />
+    <None Include="dll\mpir.dll" />
+  </ItemGroup>
 </Project>
