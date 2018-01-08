@@ -116,7 +116,7 @@ void MandelbrotRenderer::generate() {
 	threads.push_back(std::thread(&MandelbrotRenderer::construct, this, 0, width / 2, 0, height / 2, data, false));
 	threads.push_back(std::thread(&MandelbrotRenderer::construct, this, width / 2, width, 0, height / 2, data, false));
 	threads.push_back(std::thread(&MandelbrotRenderer::construct, this, 0, width / 2, height / 2, height, data, false));
-	construct(width / 2, width, height / 2, height, data, false);
+	construct(width / 2, width, height / 2, height, data, true);
 
 
 	for (unsigned int i{ 0 }; i < threads.size(); ++i)
