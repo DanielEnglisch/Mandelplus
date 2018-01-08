@@ -9,7 +9,16 @@
 #include <vector>
 #include <ctime>
 
-#include <MPFR\mpfr.h>
+#include "MPFR\mpreal.h"
+
+
+using mpfr::mpreal;
+
+// Required precision of computations in decimal digits
+// Play with it to check different precisions
+// Setup default precision for all subsequent computations
+// MPFR accepts precision in bits - so we do the conversion 
+
 
 /* Structs */
 struct Color {
@@ -17,17 +26,8 @@ struct Color {
 };
 
 struct ManVal {
-
-	mpfr_t r, c;
+	mpreal r, c;
 	unsigned int i;
-	ManVal() = default;
-	ManVal(mpfr_t r, mpfr_t c , unsigned int i) {
-		this->i = i;
-		mpfr_init2(this->r, 128);
-		mpfr_init2(this->c, 128);
-		mpfr_set(this->r, r, MPFR_RNDU);
-		mpfr_set(this->c, c, MPFR_RNDU);
-	}
 };
 
 
@@ -55,7 +55,7 @@ private:
 	/* Coloring method from https://stackoverflow.com/a/25816111 */
 	const double ONE_OVER_LOG2{ 1.442695040889 };
 
-	Color getColor(const unsigned int i, mpfr_t  r, mpfr_t  c);
+	Color getColor(const unsigned int i, mpreal  r, mpreal  c);
 	ManVal getMandelbrotValue(const int x, const int y);
 	void construct(const unsigned int minWidth, const unsigned int maxWidth, const unsigned int minHeight, const unsigned int maxHeight, ManVal* data, const bool log = false);
 
@@ -65,6 +65,8 @@ public:
 	MandelbrotRenderer(const unsigned int width, const unsigned int height, const unsigned int maxIterations, const double zoom, const double dx, const  double dy)
 		:width{ width }, height{ height }, maxIterations{ maxIterations }, zoom{ zoom }, dx{ dx }, dy{ dy }
 	{		
+		;
+
 		numPixels = width*height;
 		data = new ManVal[numPixels];
 		rgbBuffer = new char[numPixels *3];

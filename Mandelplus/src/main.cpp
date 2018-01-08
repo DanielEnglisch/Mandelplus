@@ -43,6 +43,9 @@ int main(int argc, char* argv[]){
 	const unsigned int iterations = atoi(argv[6]);
 	*/
 
+	const int digits = mpfr::digits2bits(4);
+	mpfr::mpreal::set_default_prec(digits);
+
 	const unsigned int width = 50;
 	const unsigned int height = 50;
 	const unsigned int iterations = 3000;
