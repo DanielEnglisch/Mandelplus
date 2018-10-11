@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <thread>
 #include <vector>
+#include <iomanip>      // std::setprecisio
 #include <ctime>
 
 /* Structs */
@@ -23,6 +24,8 @@ struct ManVal {
 class MandelbrotRenderer {
 private:
 	std::vector<std::thread> threads;
+
+	const int tileSize = 2;
 
 	unsigned int width{ 100 };
 	unsigned int height{ 100 };
@@ -46,8 +49,8 @@ private:
 
 	Color getColor(const int i, const double r, const double c);
 	ManVal getMandelbrotValue(const int x, const int y);
-	void construct(const unsigned int minWidth, const unsigned int maxWidth, const unsigned int minHeight, const unsigned int maxHeight, ManVal* data, const bool log = false);
-
+	void construct(const unsigned int minWidth, const unsigned int maxWidth, const unsigned int minHeight, const unsigned int maxHeight, ManVal* data);
+	void MandelbrotRenderer::colorThread(const unsigned int minWidth, const unsigned int maxWidth, const unsigned int minHeight, const unsigned int maxHeight);
 
 public:
 

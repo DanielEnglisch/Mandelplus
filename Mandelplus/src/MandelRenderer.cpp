@@ -49,14 +49,12 @@ void  MandelbrotRenderer::exportPPM() const {
 	}
 	else {
 		(void)fprintf(fp, "P6\n%d %d\n255\n", width, height);
-		std::cout << "Writing " << sizeof(char)*numPixels * 3 << " Bytes..." << std::endl;
 		fwrite(rgbBuffer, sizeof(char), numPixels * 3, fp);
 		(void)fclose(fp);
-		std::cout << "Exported image: export.ppm!" << std::endl;
 	}
 }
 
-void MandelbrotRenderer::construct(const unsigned int minWidth, const unsigned int maxWidth, const unsigned int minHeight, const unsigned int maxHeight, ManVal* data, const bool log) {
+void MandelbrotRenderer::construct(const unsigned int minWidth, const unsigned int maxWidth, const unsigned int minHeight, const unsigned int maxHeight, ManVal* data) {
 
 	for (unsigned int x{ minWidth }; x < maxWidth; x++) {
 		for (unsigned int y{ minHeight }; y < maxHeight; y++) {
@@ -64,24 +62,12 @@ void MandelbrotRenderer::construct(const unsigned int minWidth, const unsigned i
 			const ManVal v{ getMandelbrotValue(x, y) };
 			data[i] = v;
 		}
-		if (log)
-			std::cout << ((x - minWidth) / (double)(maxWidth - minWidth)) * 100 << "%" << std::endl;
-
 	}
-
 }
 
-void MandelbrotRenderer::color() {
-	if (rgbBuffer != nullptr) {
-		delete[] rgbBuffer;
-		rgbBuffer = new char[numPixels * 3];
-	}
-
-	std::cout << "=== Coloring... ===" << std::endl;
-
-
-	for (unsigned int x{ 0 }; x < width; x++) {
-		for (unsigned int y{ 0 }; y < height; y++) {
+void MandelbrotRenderer::colorThread(const unsigned int minWidth, const unsigned int maxWidth, const unsigned int minHeight, const unsigned int maxHeight) {
+	for (unsigned int x{ minWidth }; x < maxWidth; x++) {
+		for (unsigned int y{ minHeight }; y < maxHeight; y++) {
 
 			const unsigned int dataIndex{ (x + y * width) };
 			const unsigned int i{ dataIndex * 3 };
@@ -94,8 +80,35 @@ void MandelbrotRenderer::color() {
 			rgbBuffer[i + 2] = c.b;
 
 		}
-		//std::cout << ((x * width) / (double)numPixels)*100 << "%" << std::endl;
+	}		
+}
+
+void MandelbrotRenderer::color() {
+	if (rgbBuffer != nullptr) {
+		delete[] rgbBuffer;
+		rgbBuffer = new char[numPixels * 3];
 	}
+
+	int incrementX = width / tileSize;
+	int incrementY = height / tileSize;
+
+	threads.clear();
+
+	for (int x = 0; x < tileSize; x++) {
+		for (int y = 0; y < tileSize; y++) {
+			threads.push_back(std::thread(&MandelbrotRenderer::colorThread,this, x * incrementX, (x + 1) * (incrementX), y * incrementY, (y + 1) * (incrementX)));
+
+		}
+	}
+
+	for (unsigned int i{ 0 }; i < threads.size(); ++i)
+	{
+		if (threads[i].joinable()) {
+			threads.at(i).join();
+		}
+	}
+
+	
 
 }
 
@@ -105,27 +118,22 @@ void MandelbrotRenderer::generate() {
 		data = new ManVal[numPixels];
 	}
 
-	std::cout << "Rendering  " << width << "x" << height << " with " << maxIterations << " iterations" << std::endl;
-	std::cout << "Zoom:" << zoom << std::endl;
-	std::cout << "Dx:" << dx << std::endl;
-	std::cout << "Dy:" << dy << std::endl;
+	int incrementX = width / tileSize;
+	int incrementY = height / tileSize;
 
-	const clock_t begin{ clock() };
-	std::cout << "Rendering with 4 threads..." << std::endl;
 
-	threads.push_back(std::thread(&MandelbrotRenderer::construct, this, 0, width / 2, 0, height / 2, data, false));
-	threads.push_back(std::thread(&MandelbrotRenderer::construct, this, width / 2, width, 0, height / 2, data, false));
-	threads.push_back(std::thread(&MandelbrotRenderer::construct, this, 0, width / 2, height / 2, height, data, false));
-	construct(width / 2, width, height / 2, height, data, true);
-
+	for (int x = 0; x < tileSize; x++) {
+		for (int y = 0; y < tileSize; y++) {
+			threads.push_back(std::thread(&MandelbrotRenderer::construct, this, x * incrementX, (x+1) * (incrementX), y * incrementY, (y + 1) * (incrementX), data));
+		}
+	}
 
 	for (unsigned int i{ 0 }; i < threads.size(); ++i)
 	{
-		if (threads[i].joinable())
+		if (threads[i].joinable()) {
 			threads.at(i).join();
+		}
 	}
-
-	std::cout << "Done! Took " << (double(clock() - begin) / CLOCKS_PER_SEC) << "s" << std::endl;
 
 }
 
